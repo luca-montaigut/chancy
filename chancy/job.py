@@ -7,9 +7,11 @@ from typing import (
     Any,
     ParamSpec,
     Protocol,
+    Self,
     TypedDict,
     TypeVar,
     Union,
+    cast,
 )
 from uuid import UUID
 
@@ -132,7 +134,7 @@ class Job:
     meta: dict[str, Any] = dataclasses.field(default_factory=dict)
 
     @classmethod
-    def from_func(cls, func, **kwargs):
+    def from_func(cls, func: Callable[..., Any], **kwargs: Any) -> Self:
         """
         Create a job from a function, attempting to determine the function's
         importable name automatically.
@@ -308,8 +310,9 @@ R = TypeVar("R")
 
 
 class IsAJob(Protocol[P, R]):
-    __call__: Callable[P, R]
     job: Job
+
+    def __call__(self, *args: P.args, **kwargs: P.kwargs) -> R: ...
 
 
 def job(
@@ -341,7 +344,8 @@ def job(
     """
 
     def decorator(func: Callable[P, R]) -> IsAJob[P, R]:
-        func.job = Job.from_func(func, **options)
-        return func
+        decorated = cast(IsAJob[P, R], func)
+        decorated.job = Job.from_func(func, **options)
+        return decorated
 
     return decorator
