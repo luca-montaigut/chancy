@@ -364,6 +364,25 @@ async def test_sync_push(chancy: Chancy, worker: Worker):
 
 
 @pytest.mark.asyncio
+async def test_sync_push_many_decorated_functions(chancy: Chancy):
+    """
+    Ensure that sync_push_many accepts decorated functions, like push_many
+    does, rather than only Job instances.
+    """
+    with chancy:
+        refs = [
+            ref
+            for batch in chancy.sync_push_many(
+                [job_to_run, job_to_run.job.with_queue("low")]
+            )
+            for ref in batch
+        ]
+
+    jobs = await chancy.get_jobs(refs)
+    assert sorted(j.queue for j in jobs) == ["default", "low"]
+
+
+@pytest.mark.asyncio
 async def test_job_ordering(chancy: Chancy, worker: Worker):
     """
     Ensure that jobs are run in the order they are pushed when there is a
